@@ -458,6 +458,8 @@ class UserService extends Component
 
         $elements = Craft::$app->getElements();
 
+        Craft::$app->getView()->setTemplateMode(View::TEMPLATE_MODE_SITE);
+
         if (!$elements->saveElement($user)) {
             GraphqlAuthentication::$plugin->getInstance()->error->throw(json_encode($user->getErrors()), 'INVALID');
         }
