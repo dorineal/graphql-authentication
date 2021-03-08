@@ -30,6 +30,7 @@ class Auth extends ObjectType
             'name' => static::getName(),
             'fields' => [
                 'user' => User::getType(),
+                'userFolderId' => Type::string(),
                 'schema' => Type::nonNull(Type::string()),
                 'jwt' => Type::nonNull(Type::string()),
                 'jwtExpiresAt' => Type::nonNull(Type::float()),

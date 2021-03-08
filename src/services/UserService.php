@@ -4,6 +4,7 @@ namespace jamesedmonston\graphqlauthentication\services;
 
 use Craft;
 use craft\base\Component;
+use craft\base\VolumeInterface;
 use craft\elements\User;
 use craft\gql\arguments\elements\User as UserArguments;
 use craft\gql\interfaces\elements\User as ElementsUser;
@@ -11,10 +12,14 @@ use craft\helpers\DateTimeHelper;
 use craft\helpers\StringHelper;
 use craft\records\User as UserRecord;
 use craft\services\Gql;
+use craft\web\View;
 use GraphQL\Type\Definition\Type;
 use jamesedmonston\graphqlauthentication\gql\Auth;
 use jamesedmonston\graphqlauthentication\GraphqlAuthentication;
 use yii\base\Event;
+
+use craft\errors\InvalidSubpathException;
+use craft\errors\VolumeException;
 
 class UserService extends Component
 {
@@ -473,8 +478,16 @@ class UserService extends Component
 
     public function getResponseFields(User $user, int $schemaId, $token): array
     {
+        $newAssetFolderId = 0;
+
+        if ($user->id) {
+            $volume = Craft::$app->getVolumes()->getVolumeByHandle('lopAssets');
+            $newAssetFolderId = $this->_userPhotoFolderId($user, $volume);
+        }
+
         return [
             'user' => $user,
+            'userFolderId' => $newAssetFolderId,
             'schema' => Craft::$app->getGql()->getSchemaById($schemaId)->name,
             'jwt' => $token['jwt'],
             'jwtExpiresAt' => $token['jwtExpiresAt'],
@@ -492,5 +505,35 @@ class UserService extends Component
         $userRecord = UserRecord::findOne($user->id);
         $userRecord->lastLoginDate = $now;
         $userRecord->save();
+    }
+
+    /**
+     * PRIVATE FUNCTION TAKEN FROM USERS MODEL FROM CRAFT CMS CORE.
+     * We needed to reproduce the creation of a folder at the registration
+     * of a new user. The folder takes the user ID as a name.
+     *
+     * Returns the folder that a user’s photo should be stored.
+     *
+     * @param User $user
+     * @param VolumeInterface $volume The user photo volume
+     * @return int
+     * @throws VolumeException if the user photo volume doesn’t exist
+     * @throws InvalidSubpathException if the user photo subpath can’t be resolved
+     */
+    private function _userPhotoFolderId(User $user, VolumeInterface $volume): int
+    {
+        $subpath = (string)Craft::$app->getProjectConfig()->get('users.photoSubpath');
+
+        if (
+            $subpath !== ''
+        ) {
+            try {
+                $subpath = Craft::$app->getView()->renderObjectTemplate($subpath, $user);
+            } catch (\Throwable $e) {
+                throw new InvalidSubpathException($subpath);
+            }
+        }
+
+        return Craft::$app->getAssets()->ensureFolderByFullPathAndVolume($subpath, $volume);
     }
 }
