@@ -529,7 +529,7 @@ class UserService extends Component
         $newAssetFolderId = 0;
 
         if ($user->id) {
-            $volume = Craft::$app->getVolumes()->getVolumeByHandle('lopAssets');
+            $volume = Craft::$app->getVolumes()->getVolumeByHandle('lopixs');
             $newAssetFolderId = $this->_userPhotoFolderId($user, $volume);
         }
 
